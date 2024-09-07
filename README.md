@@ -6,7 +6,7 @@
 
 ```
 git clone https://github.com/sharl/amedas.git
-cd sapporo-fddi
+cd amedas
 pip install -r requirements.txt
 python amedas.py
 ```
