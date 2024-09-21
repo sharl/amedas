@@ -64,7 +64,7 @@ class taskTray:
         if temp < 0:
             temp = -temp
             pm = 'マイナス'
-        vvox(f'{pm}{temp}度になったのだ', speaker=self.daytime(ずんだもん))
+        vvox(f"{pm}{str(temp).strip('.0')}度になったのだ", speaker=self.daytime(ずんだもん))
 
     def vvox_snow(self):
         vvox(f'{self.snow}センチになったわ', speaker=self.daytime(四国めたん))
