@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import sys
 import time
 import io
 import binascii
@@ -11,7 +12,7 @@ from PIL import Image
 import requests
 from vvox import vvox
 
-INTERVAL = 600          # seconds
+INTERVAL = 300          # seconds
 D_TEMP = 100
 D_SNOW = -1
 WD = '静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南南西 南西 西南西 西 西北西 北西 北北西 北'.split()
@@ -20,22 +21,26 @@ WD = '静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南�
 
 
 class taskTray:
-    def __init__(self):
+    def __init__(self, code='44132'):
         # スレッド実行モード
         self.running = False
         self.vvox = True
-        self.code = '44132'             # 東京
+        self.default = str()
+        self.code = code
         self.loc = {}
+        self.name = str()
         self.last_modified = None
         self.temp = D_TEMP
         self.snow = D_SNOW
 
         # スポット情報取得
-        try:
-            with open('.amedas') as fd:
-                self.code = fd.read().strip()
-        except Exception:
-            pass
+        if not code:
+            try:
+                with open('.amedas') as fd:
+                    self.code = fd.read().strip()
+                    self.default = self.code
+            except Exception:
+                pass
 
         # アイコンの画像をデコード
         image = Image.open(io.BytesIO(binascii.unhexlify(ICON.replace('\n', '').strip())))
@@ -59,15 +64,17 @@ class taskTray:
         return speaker[0]
 
     def vvox_temp(self):
+        _name = '' if self.code == self.default else f'{self.name}が'
         temp = self.temp
         pm = ''
         if temp < 0:
             temp = -temp
             pm = 'マイナス'
-        vvox(f"{pm}{str(temp).replace('.0', '')}度になったのだ", speaker=self.daytime(ずんだもん))
+        vvox(f"{_name}{pm}{str(temp).replace('.0', '')}度になったのだ", speaker=self.daytime(ずんだもん))
 
     def vvox_snow(self):
-        vvox(f'{self.snow}センチになったわ', speaker=self.daytime(四国めたん))
+        _name = '' if self.code == self.default else f'{self.name}が'
+        vvox(f'{_name}{self.snow}センチになったわ', speaker=self.daytime(四国めたん))
 
     def toggle(self):
         self.vvox = not self.vvox
@@ -88,6 +95,7 @@ class taskTray:
             )
             if r and r.status_code == 200:
                 self.loc = r.json()[self.code]
+                self.name = self.loc.get('kjName', '-')
                 self.last_modified = r.headers.get('Last-Modified')
         except Exception:
             return
@@ -111,7 +119,7 @@ class taskTray:
                     h = '24'
                 m = last_key[10:12]
                 lines = [
-                    self.loc.get('kjName', '-') + f' {h}:{m}'
+                    self.name + f' {h}:{m}'
                 ]
                 for x in [
                         '気温 temp 度',
@@ -193,4 +201,7 @@ e517141615979496955754568931884a57d7d4d6d537343635b7b4b6b58b32b08bc877747675f7f4
 """
 
 if __name__ == '__main__':
-    taskTray().runApp()
+    code = None
+    if len(sys.argv) == 2:
+        code = sys.argv[1]
+    taskTray(code).runApp()
