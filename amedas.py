@@ -43,7 +43,10 @@ class taskTray:
                 pass
 
         # アイコンの画像をデコード
-        image = Image.open(io.BytesIO(binascii.unhexlify(ICON.replace('\n', '').strip())))
+        if self.code == self.default:
+            image = Image.open(io.BytesIO(binascii.unhexlify(ICON.replace('\n', '').strip())))
+        else:
+            image = Image.open(f'{self.code}.png')
         menu = Menu(
             MenuItem('Reset', self.reset, default=True, visible=False),
             MenuItem('Voice', self.toggle, checked=lambda MenuItem: self.vvox),
