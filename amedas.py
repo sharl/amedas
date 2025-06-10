@@ -18,6 +18,7 @@ D_SNOW = -1
 WD = '静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南南西 南西 西南西 西 西北西 北西 北北西 北'.split()
 ずんだもん = [3, 22]
 四国めたん = [2, 36]
+COCOROAI_NOTIFICATION_PORT = 55604
 
 
 class taskTray:
@@ -32,6 +33,13 @@ class taskTray:
         self.last_modified = None
         self.temp = D_TEMP
         self.snow = D_SNOW
+        # check CocoroAI notification
+        self.cocoro_notify = False
+        try:
+            requests.get(f'http://localhost:{COCOROAI_NOTIFICATION_PORT}', timeout=1)
+            self.cocoro_notify = True
+        except Exception:
+            pass
 
         # スポット情報取得
         if not code:
@@ -73,7 +81,16 @@ class taskTray:
         if temp < 0:
             temp = -temp
             pm = 'マイナス'
-        vvox(f"{_name}{pm}{str(temp).replace('.0', '')}度になったのだ", speaker=self.daytime(ずんだもん))
+        message = f"{_name}{pm}{str(temp).replace('.0', '')}度になったのだ"
+        vvox(message, speaker=self.daytime(ずんだもん))
+        if self.cocoro_notify:
+            requests.post(
+                f'http://localhost:{COCOROAI_NOTIFICATION_PORT}/api/v1/notification',
+                json={
+                    'from': 'アメダス',
+                    'message': message,
+                },
+            )
 
     def vvox_snow(self):
         _name = '' if self.code == self.default else f'{self.name}が'
