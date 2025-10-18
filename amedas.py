@@ -180,27 +180,32 @@ class taskTray:
                 ]:
                     t, k, u = x.split()
                     if k in _vars:
+                        v, aqc = _vars[k]
+                        print(k, [v, aqc])
+                        if isinstance(v, float):
+                            if v == int(v):
+                                v = int(v)
+                        # 0: 正常 1: 准正常
+                        if aqc != 0 and aqc != 1:
+                            continue
+
                         if self.vvox:
                             if k == 'temp':
-                                temp = _vars[k][0]
+                                temp = v
                                 if int(temp) != int(self.temp):
                                     self.temp = temp
                                     self.vvox_temp()
                             if k == 'snow':
-                                snow = _vars[k][0]
+                                snow = v
                                 if snow is not None and snow != self.snow:
                                     self.snow = snow
                                     self.vvox_snow()
                         if k == 'windDirection':
-                            lines.append(f'{t} {WD[_vars[k][0]]}')
+                            lines.append(f'{t} {WD[v]}')
                         elif k == 'weather':
-                            lines.append(f'{t} {WEATHER_INFO[_vars[k][0]]}')
+                            lines.append(f'{t} {WEATHER_INFO[v]}')
                         else:
-                            print(k, _vars[k])
-                            if ('snow' not in _vars and k == 'snow1h') or (k == 'snow' and _vars[k][0] is None) or (_vars[k][1] != 0):
-                                continue
-                            else:
-                                lines.append(f'{t} {_vars[k][0]}{u}')
+                            lines.append(f'{t} {v}{u}')
                 title = '\n'.join(lines)
                 self.app.title = title
                 self.app.update_menu()
