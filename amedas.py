@@ -1,21 +1,64 @@
 # -*- coding: utf-8 -*-
-import sys
-import time
-import io
 import binascii
 import datetime as dt
+import io
+import sys
 import threading
+import time
 
-import schedule
-from pystray import Icon, Menu, MenuItem
 from PIL import Image
-import requests
+from pystray import Icon, Menu, MenuItem
 from vvox import vvox
+import requests
+import schedule
 
 INTERVAL = 300          # seconds
 D_TEMP = 100
 D_SNOW = -1
 WD = '静穏 北北東 北東 東北東 東 東南東 南東 南南東 南 南南西 南西 西南西 西 西北西 北西 北北西 北'.split()
+WEATHER_INFO = {
+    0: "晴",
+    1: "曇",
+    2: "煙霧",
+    3: "霧",
+    4: "降水またはしゅう雨性の降水",
+    5: "霧雨",
+    6: "着氷性の霧雨",
+    7: "雨",
+    8: "着氷性の雨",
+    9: "みぞれ",
+    10: "雪",
+    11: "凍雨",
+    12: "霧雪",
+    13: "しゅう雨または止み間のある雨",
+    14: "しゅう雪または止み間のある雪",
+    15: "ひょう",
+    16: "雷",
+    30: "天気不明",
+    31: "欠測",
+}
+
+# AQC (Automatic Quality Control) 識別符号
+# https://www.data.jma.go.jp/stats/data/mdrr/man/remark.html
+# https://www.data.jma.go.jp/suishin/shiyou/pdf/no13301
+# 0 正常
+# 1 準正常 (やや疑わしい)
+# 2 非常に疑わしい
+# 3 利用に適さない
+# 4 観測値は期間内で資料数が不足している
+# 5 点検又は計画休止のため欠測
+# 6 障害のため欠測
+# 7 この要素の観測はしていない
+AQC_INFO = {
+    0: '',
+    1: ')',
+    2: '#',
+    3: '#',
+    4: ']',
+    5: '休止中',
+    6: '✕',
+    None: '　',
+}
 ずんだもん = [3, 22]
 四国めたん = [2, 36]
 
@@ -125,6 +168,7 @@ class taskTray:
                     self.name + f' {h}:{m}'
                 ]
                 for x in [
+                        '天気 weather -',
                         '気温 temp 度',
                         '降水 precipitation1h mm/h',
                         '風向 windDirection -',
@@ -149,6 +193,8 @@ class taskTray:
                                     self.vvox_snow()
                         if k == 'windDirection':
                             lines.append(f'{t} {WD[_vars[k][0]]}')
+                        elif k == 'weather':
+                            lines.append(f'{t} {WEATHER_INFO[_vars[k][0]]}')
                         else:
                             print(k, _vars[k])
                             if ('snow' not in _vars and k == 'snow1h') or (k == 'snow' and _vars[k][0] is None) or (_vars[k][1] != 0):
