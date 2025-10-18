@@ -75,6 +75,7 @@ class taskTray:
         self.last_modified = None
         self.temp = D_TEMP
         self.snow = D_SNOW
+        self.weather = None
 
         # スポット情報取得
         if not code:
@@ -122,12 +123,17 @@ class taskTray:
         _name = '' if self.code == self.default else f'{self.name}が'
         vvox(f'{_name}{self.snow}センチになったわ', speaker=self.daytime(四国めたん))
 
+    def vvox_weather(self):
+        _name = '' if self.code == self.default else f'{self.name}は'
+        vvox(f'{_name}{self.weather}なのだ', speaker=self.daytime(ずんだもん))
+
     def toggle(self):
         self.vvox = not self.vvox
 
     def reset(self):
         self.temp = D_TEMP
         self.snow = D_SNOW
+        self.weather = None
         self.amedas()
 
     def amedas(self):
@@ -200,6 +206,11 @@ class taskTray:
                                 if snow is not None and snow != self.snow:
                                     self.snow = snow
                                     self.vvox_snow()
+                            if k == 'weather':
+                                weather = WEATHER_INFO[v]
+                                if weather != self.weather:
+                                    self.weather = weather
+                                    self.vvox_weather()
                         if k == 'windDirection':
                             lines.append(f'{t} {WD[v]}')
                         elif k == 'weather':
