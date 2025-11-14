@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
-import json
-import requests
+import io
+import wave
+
 import pyaudio
+import requests
+
+CHUNK = 1024
 
 
-def vvox(text, host='127.0.0.1', port=50021, speaker=3):
+def vvox(text, host='127.0.0.1', port=50021, speaker=3, speed=1.0, volume=1.0):
     params = {
         'text': text,
         'speaker': speaker,
@@ -12,12 +16,19 @@ def vvox(text, host='127.0.0.1', port=50021, speaker=3):
     query = requests.post(
         f'http://{host}:{port}/audio_query',
         params=params,
+        timeout=10,
     )
+    qp = query.json()
+    # modify query
+    qp['speedScale'] = speed
+    qp['volumeScale'] = volume
+
     synthesis = requests.post(
         f'http://{host}:{port}/synthesis',
         headers={'Content-Type': 'application/json'},
         params=params,
-        data=json.dumps(query.json()),
+        json=qp,
+        timeout=10,
     )
     voice = synthesis.content
 
@@ -25,10 +36,16 @@ def vvox(text, host='127.0.0.1', port=50021, speaker=3):
     stream = pya.open(
         format=pyaudio.paInt16,         # 16bit
         channels=1,                     # モノラル
-        rate=24000,                     # 設定の「音声のサンプリングレート」に合わせる デフォルトは24000
+        rate=qp['outputSamplingRate'],
         output=True,
     )
-    stream.write(voice)
+
+    wf = wave.open(io.BytesIO(voice), 'rb')
+    data = wf.readframes(CHUNK)
+    while data:
+        stream.write(data)
+        data = wf.readframes(CHUNK)
+
     stream.stop_stream()
     stream.close()
     pya.terminate()
