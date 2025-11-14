@@ -5,8 +5,6 @@ import wave
 import pyaudio
 import requests
 
-CHUNK = 1024
-
 
 def vvox(text, host='127.0.0.1', port=50021, speaker=3, speed=1.0, volume=1.0):
     params = {
@@ -25,27 +23,22 @@ def vvox(text, host='127.0.0.1', port=50021, speaker=3, speed=1.0, volume=1.0):
 
     synthesis = requests.post(
         f'http://{host}:{port}/synthesis',
-        headers={'Content-Type': 'application/json'},
         params=params,
         json=qp,
         timeout=10,
     )
-    voice = synthesis.content
 
-    pya = pyaudio.PyAudio()
-    stream = pya.open(
-        format=pyaudio.paInt16,         # 16bit
-        channels=1,                     # モノラル
-        rate=qp['outputSamplingRate'],
-        output=True,
-    )
+    with wave.open(io.BytesIO(synthesis.content), 'rb') as wf:
+        data = wf.readframes(wf.getnframes())
 
-    wf = wave.open(io.BytesIO(voice), 'rb')
-    data = wf.readframes(CHUNK)
-    while data:
+        pya = pyaudio.PyAudio()
+        stream = pya.open(
+            format=pyaudio.paInt16,         # 16bit
+            channels=1,                     # モノラル
+            rate=qp['outputSamplingRate'],
+            output=True,
+        )
         stream.write(data)
-        data = wf.readframes(CHUNK)
-
-    stream.stop_stream()
-    stream.close()
-    pya.terminate()
+        stream.stop_stream()
+        stream.close()
+        pya.terminate()
