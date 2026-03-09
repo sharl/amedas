@@ -119,9 +119,10 @@ class taskTray:
             pm = 'マイナス'
         vvox(f"{_name}{pm}{str(temp).replace('.0', '')}度になったのだ", speaker=self.daytime(ずんだもん))
 
-    def vvox_snow(self):
+    def vvox_snow(self, plus):
         _name = '' if self.code == self.default else f'{self.name}が'
-        vvox(f'{_name}{self.snow}センチになったわ', speaker=self.daytime(四国めたん))
+        _plus = '増えた' if plus else 'なった'
+        vvox(f'{_name}{self.snow}センチに{_plus}わ', speaker=self.daytime(四国めたん))
 
     def vvox_weather(self):
         _name = '' if self.code == self.default else f'{self.name}は'
@@ -204,8 +205,9 @@ class taskTray:
                             if k == 'snow':
                                 snow = v
                                 if snow is not None and snow != self.snow:
+                                    plus = snow > self.snow
                                     self.snow = snow
-                                    self.vvox_snow()
+                                    self.vvox_snow(plus)
                             if k == 'weather':
                                 weather = WEATHER_INFO[v]
                                 if weather != self.weather:
