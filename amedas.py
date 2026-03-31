@@ -205,7 +205,7 @@ class taskTray:
                             if k == 'snow':
                                 snow = v
                                 if snow is not None and snow != self.snow:
-                                    plus = snow > self.snow
+                                    plus = snow > self.snow and self.snow != D_SNOW
                                     self.snow = snow
                                     self.vvox_snow(plus)
                             if k == 'weather':
