@@ -6,11 +6,14 @@ import sys
 import threading
 import time
 
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from pystray import Icon, Menu, MenuItem
 from vvox import vvox
 import requests
 import schedule
+
+from Badges import Badges
+from utils import resource_path
 
 INTERVAL = 300          # seconds
 D_TEMP = 100
@@ -76,6 +79,8 @@ class taskTray:
         self.temp = D_TEMP
         self.snow = D_SNOW
         self.weather = None
+        # バッジ周り初期化
+        self.show_badges = True
 
         # スポット情報取得
         if not code:
@@ -93,6 +98,7 @@ class taskTray:
             image = Image.open(f'{self.code}.png')
         menu = Menu(
             MenuItem('Reset', self.reset, default=True, visible=False),
+            MenuItem('Show Badge', self.toggleBadges, checked=lambda _: self.show_badges),
             MenuItem('Voice', self.toggle, checked=lambda MenuItem: self.vvox),
             MenuItem('Exit', self.stopApp),
         )
@@ -102,7 +108,13 @@ class taskTray:
             icon=image,
             menu=menu
         )
+        self.badges = Badges()
+        self.badges.start()
         self.amedas()
+
+    def toggleBadges(self, _, __):
+        self.show_badges = not self.show_badges
+        self.badges.set_visible(self.show_badges)
 
     def daytime(self, speaker):
         now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
@@ -222,8 +234,77 @@ class taskTray:
                 title = '\n'.join(lines)
                 self.app.title = title
                 self.app.update_menu()
+
+                images = self.getImages(weather, temp, snow)
+                self.badges.set_visible(self.show_badges)
+                self.badges.update(images)
         except Exception:
             pass
+
+    def getImages(self, w, t, s):
+        def create_fitted_text_image(text, font_path=r"C:\Windows\Fonts\arialbd.ttf", target_height=72, padding=16):
+            # 1. 適切なフォントサイズを推測（高さ72pxなら、フォントサイズもだいたい72から開始）
+            font_size = target_height
+            font = ImageFont.truetype(font_path, font_size)
+
+            # 2. textbbox で実際の描画サイズを測定
+            # (left, top, right, bottom) が返る
+            bbox = ImageDraw.Draw(Image.new("RGB", (0, 0))).textbbox((0, 0), text, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+
+            # 3. 高さに合わせてフォントサイズを微調整（比率計算）
+            # 実際の高さ text_h が target_height になるようにスケールさせる
+            adjusted_font_size = int(font_size * (target_height / text_h)) - padding
+            font = ImageFont.truetype(font_path, adjusted_font_size)
+
+            # 再測定
+            bbox = ImageDraw.Draw(Image.new("RGB", (0, 0))).textbbox((0, 0), text, font=font)
+            text_w = bbox[2] - bbox[0]
+            text_h = bbox[3] - bbox[1]
+
+            # 4. 画像の作成（横幅は文字に合わせて可変）
+            img_w = text_w + (padding * 2)
+            img_h = target_height + (padding * 2)
+            image = Image.new("RGB", (int(img_w), int(img_h)), (0, 0, 0))
+            draw = ImageDraw.Draw(image)
+
+            # 5. 描画位置の計算
+            # textbbox の left, top を引くことで、余白をリセットして左上に詰められます
+            draw.text((padding - bbox[0], padding - bbox[1]), text, font=font, fill=(255, 255, 255))
+
+            return image
+
+        images = []
+        # 天気アイコン
+        icons = {
+            "晴": '2600',
+            "曇": '2601',
+            "霧": '1f32b',
+            "雨": '2614',
+            "みぞれ": '1f367',
+            "雪": '2603',
+            "雷": '26a1',
+        }
+        if w in icons:
+            code_point = icons[w]
+            image = Image.open(resource_path(f'Assets/emoji_u{code_point}.png'))
+            images.append(image)
+        else:
+            print(f'{w} not in icons')
+            vvox(f'想定外の天気アイコンが発生しました {w}', speed=1.2)
+
+        # 気温
+        if t != D_TEMP:
+            image = create_fitted_text_image(f'{t}C')
+            images.append(image)
+
+        # 積雪
+        if s != D_SNOW and s != 0:
+            image = create_fitted_text_image(f'{s}cm')
+            images.append(image)
+
+        return images
 
     def runSchedule(self):
         # INTERVAL 秒ごとにタスクを実行
