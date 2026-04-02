@@ -63,9 +63,9 @@ class Badges(threading.Thread):
     #     self.root.update()
     #     self.root.after(0, self._clamp_position)
 
-    def toggle_orientation(self):
-        orientation = 'vertical' if self.orientation == 'horizontal' else 'horizontal'
-        self.update(self.current_images, orientation=orientation)
+    # def toggle_orientation(self):
+    #     orientation = 'vertical' if self.orientation == 'horizontal' else 'horizontal'
+    #     self.update(self.current_images, orientation=orientation)
 
     def update(self, pil_images, orientation=None):
         """表示状態にかかわらず、containerの中身を最新にする"""
@@ -133,7 +133,7 @@ class Badges(threading.Thread):
         # どの画像をクリックしてもウィンドウ全体を操作できるようにバインド
         label.bind('<Button-1>', self.start_drag)
         label.bind('<B1-Motion>', self.drag_window)
-        label.bind('<Button-3>', lambda e: self.toggle_orientation())
+        # label.bind('<Button-3>', lambda e: self.toggle_orientation())
 
         label.pack(side=side, padx=0, pady=0, expand=expand)
         return label
