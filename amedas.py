@@ -70,7 +70,7 @@ class taskTray:
     def __init__(self, code='44132'):
         # スレッド実行モード
         self.running = False
-        self.vvox = True
+        self.vvox = False
         self.default = str()
         self.code = code
         self.loc = {}
@@ -123,6 +123,9 @@ class taskTray:
         return speaker[0]
 
     def vvox_temp(self):
+        if not self.vvox:
+            return
+
         _name = '' if self.code == self.default else f'{self.name}が'
         temp = self.temp
         pm = ''
@@ -132,11 +135,17 @@ class taskTray:
         vvox(f"{_name}{pm}{str(temp).replace('.0', '')}度になったのだ", speaker=self.daytime(ずんだもん))
 
     def vvox_snow(self, plus):
+        if not self.vvox:
+            return
+
         _name = '' if self.code == self.default else f'{self.name}が'
         _plus = '増えた' if plus else 'なった'
         vvox(f'{_name}{self.snow}センチに{_plus}わ', speaker=self.daytime(四国めたん))
 
     def vvox_weather(self):
+        if not self.vvox:
+            return
+
         _name = '' if self.code == self.default else f'{self.name}は'
         vvox(f'{_name}{self.weather}なのだ', speaker=self.daytime(ずんだもん))
 
@@ -186,6 +195,9 @@ class taskTray:
                 lines = [
                     self.name + f' {h}:{m}'
                 ]
+                weather = None
+                temp = D_TEMP
+                snow = D_SNOW
                 for x in [
                         '天気 weather -',
                         '気温 temp 度',
@@ -201,30 +213,31 @@ class taskTray:
                     if k in _vars:
                         v, aqc = _vars[k]
                         print(k, [v, aqc])
-                        if isinstance(v, float):
-                            if v == int(v):
-                                v = int(v)
                         # 0: 正常 1: 准正常
                         if aqc != 0 and aqc != 1:
                             continue
 
-                        if self.vvox:
-                            if k == 'temp':
-                                temp = v
-                                if int(temp) != int(self.temp):
-                                    self.temp = temp
-                                    self.vvox_temp()
-                            if k == 'snow':
-                                snow = v
-                                if snow is not None and snow != self.snow:
-                                    plus = snow > self.snow and self.snow != D_SNOW
-                                    self.snow = snow
-                                    self.vvox_snow(plus)
-                            if k == 'weather':
-                                weather = WEATHER_INFO[v]
-                                if weather != self.weather:
-                                    self.weather = weather
-                                    self.vvox_weather()
+                        if isinstance(v, float):
+                            if v == int(v):
+                                v = int(v)
+
+                        if k == 'weather':
+                            weather = WEATHER_INFO[v]
+                            if weather != self.weather:
+                                self.weather = weather
+                                self.vvox_weather()
+                        elif k == 'temp':
+                            temp = v
+                            if int(temp) != int(self.temp):
+                                self.temp = temp
+                                self.vvox_temp()
+                        elif k == 'snow':
+                            snow = v
+                            if snow is not None and snow != self.snow:
+                                plus = snow > self.snow and self.snow != D_SNOW
+                                self.snow = snow
+                                self.vvox_snow(plus)
+
                         if k == 'windDirection':
                             lines.append(f'{t} {WD[v]}')
                         elif k == 'weather':
@@ -235,6 +248,7 @@ class taskTray:
                 self.app.title = title
                 self.app.update_menu()
 
+                print(weather, temp, snow)
                 images = self.getImages(weather, temp, snow)
                 self.badges.set_visible(self.show_badges)
                 self.badges.update(images)
@@ -271,7 +285,7 @@ class taskTray:
 
             # 5. 描画位置の計算
             # textbbox の left, top を引くことで、余白をリセットして左上に詰められます
-            draw.text((padding - bbox[0], padding - bbox[1]), text, font=font, fill=(255, 255, 255))
+            draw.text((padding - bbox[0], padding * 2 - bbox[1]), text, font=font, fill=(255, 255, 255))
 
             return image
 
@@ -290,6 +304,8 @@ class taskTray:
             code_point = icons[w]
             image = Image.open(resource_path(f'Assets/emoji_u{code_point}.png'))
             images.append(image)
+        elif w is None:
+            pass
         else:
             print(f'{w} not in icons')
             vvox(f'想定外の天気アイコンが発生しました {w}', speed=1.2)
